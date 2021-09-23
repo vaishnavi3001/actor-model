@@ -36,7 +36,7 @@ let config =
 
 
 // let system = System.create "my-system" (Configuration.load())
-let system = System.create "MyServer" config
+let system = System.create "BitcoinServer" config
     
 
 // Coin collector
@@ -58,17 +58,18 @@ let coinCollector f initialState (mailbox: Actor<'a>) =
 
 let worker inputString coinCollectorRef (mailbox: Actor<'a>) = 
     let rec loop () = actor {
-        let! k = mailbox.Receive ()
-        while true do
-      
+        let! (msg:obj) = mailbox.Receive ()
+        let (k, i) : Tuple<int, int>= downcast msg
 
+        printfn "%A%A%A" msg k i
+        while true do
           let rstring n = 
             let r = Random()
             let chars = Array.concat([[|'a' .. 'z'|];[|'A' .. 'Z'|];[|'0' .. '9'|];[|'!' .. '?'|]])  
             let sz = Array.length chars in
             String(Array.init n (fun _ -> chars.[r.Next sz]))
 
-          let randomstr = "hshah1;" + rstring 5
+          let randomstr = inputString + rstring 5
 
           //SHA 256         
           let randombyte = System.Text.Encoding.ASCII.GetBytes(randomstr)
@@ -96,8 +97,6 @@ let worker inputString coinCollectorRef (mailbox: Actor<'a>) =
 
 
 // Master
-
-
 let master (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string) workerRef (mailbox: Actor<'a>) =
     let rec loop () = actor {
         let! message = mailbox.Receive ()
@@ -106,7 +105,7 @@ let master (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string) wor
         | "Mine" ->
             printfn "[INFO] Call from the main"
             for i = 1 to noOfWorkers do
-                workerRef <! noOfLeadingZeroes
+                workerRef <! (noOfLeadingZeroes, i)
         | "AssignWorkToMe" ->
             printfn "[INFO] Call from the client"
             let myString = (string noOfLeadingZeroes) + "|" + inputString
@@ -115,7 +114,8 @@ let master (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string) wor
         return! loop ()
     }
     loop()
-    
+
+
 
 
 [<EntryPoint>]
@@ -124,7 +124,7 @@ let main argv =
     // let noOfLeadingZeroes = 4
     printfn "[INFO] Number of leading zeroes: %i" noOfLeadingZeroes
 
-    let noOfWorkers = 12
+    let noOfWorkers = System.Environment.ProcessorCount 
     printfn "[INFO] Number of workers: %d" noOfWorkers
 
     let inputString = "vaishnavi.dongre"
@@ -140,12 +140,11 @@ let main argv =
         worker inputString coinCollectorRef
         |> spawnOpt system "worker"
         <| [SpawnOption.Router(RoundRobinPool(noOfWorkers))]
-
+                
     // Master
     let masterRef =
         master noOfLeadingZeroes noOfWorkers inputString workerRef
         |> spawn system "master"
-
     // Evaluation code
     let proc = Process.GetCurrentProcess()
     let cpuTimeStamp = proc.TotalProcessorTime
@@ -153,8 +152,7 @@ let main argv =
     timer.Start()
     try
         masterRef <! "Mine"
-        Thread.Sleep(60000)
-        // system.WhenTerminated.Wait()
+        System.Console.ReadLine() |> ignore
     finally
         let cpuTime = (proc.TotalProcessorTime - cpuTimeStamp).TotalMilliseconds
         printfn "CPU time = %d ms" (int64 cpuTime)
