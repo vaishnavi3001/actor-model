@@ -48,7 +48,7 @@ let printCoinAndIncrementCounter str count =
     // printfn "Incrementing counter [%d] by 1." count
     count + 1
 
-let coinCollector f initialState (mailbox: Actor<'a>) = 
+let Supervisor f initialState (mailbox: Actor<'a>) = 
     let rec loop lastState = actor {
         let! message = mailbox.Receive()
         let newState = f message lastState
@@ -56,7 +56,7 @@ let coinCollector f initialState (mailbox: Actor<'a>) =
     }
     loop initialState
 
-let worker inputString coinCollectorRef (mailbox: Actor<'a>) = 
+let worker inputString SupervisorRef (mailbox: Actor<'a>) = 
     let rec loop () = actor {
         let! (msg:obj) = mailbox.Receive ()
         let (k, i) : Tuple<int, int>= downcast msg
@@ -89,15 +89,15 @@ let worker inputString coinCollectorRef (mailbox: Actor<'a>) =
               count <- count + 1
             if count = k then
               
-              coinCollectorRef <! randomstr + " " + outputstring
+              SupervisorRef <! randomstr + " " + outputstring
         return! loop ()
     }
     loop ()
 
 
 
-// Master
-let master (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string) workerRef (mailbox: Actor<'a>) =
+// Router
+let RouterActor (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string) workerRef (mailbox: Actor<'a>) =
     let rec loop () = actor {
         let! message = mailbox.Receive ()
         let sender = mailbox.Sender ()
@@ -131,27 +131,28 @@ let main argv =
     printfn "[INFO] Input string: %s" inputString
 
     // Coin collector
-    let coinCollectorRef =
-        coinCollector printCoinAndIncrementCounter 0
-        |> spawn system "coinCollector"
+    let SupervisorRef =
+        Supervisor printCoinAndIncrementCounter 0
+        |> spawn system "Supervisor"
 
     // Worker
     let workerRef =
-        worker inputString coinCollectorRef
+        worker inputString SupervisorRef
         |> spawnOpt system "worker"
         <| [SpawnOption.Router(RoundRobinPool(noOfWorkers))]
                 
-    // Master
-    let masterRef =
-        master noOfLeadingZeroes noOfWorkers inputString workerRef
-        |> spawn system "master"
+    // Router
+    let RouterActorRef =
+        RouterActor noOfLeadingZeroes noOfWorkers inputString workerRef
+        |> spawn system "RouterActor"
+
     // Evaluation code
     let proc = Process.GetCurrentProcess()
     let cpuTimeStamp = proc.TotalProcessorTime
     let timer = new Stopwatch()
     timer.Start()
     try
-        masterRef <! "Mine"
+        RouterActorRef <! "Mine"
         System.Console.ReadLine() |> ignore
     finally
         let cpuTime = (proc.TotalProcessorTime - cpuTimeStamp).TotalMilliseconds

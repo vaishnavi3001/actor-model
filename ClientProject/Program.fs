@@ -38,7 +38,7 @@ type ClientMessage = ClientTuple of int * string
 
 
 let master ipAddress noOfWorkers workerRef (mailbox: Actor<'a>) =
-    let url = "akka.tcp://MyServer@" + ipAddress + ":8080/user/master"
+    let url = "akka.tcp://BitcoinServer@" + ipAddress + ":8080/user/master"
     let serverMaster = select url system
     let rec loop() = actor {
         let! message = mailbox.Receive()
@@ -100,7 +100,7 @@ let checkValidCoin inputString hashValue noOfLeadingZeroes =
         coin <- "-1"
     coin
 
-let findBitCoins noOfLeadingZeroes inputString coinCollectorRef =
+let findBitCoins noOfLeadingZeroes inputString SupervisorRef =
     // for i = 1 to 1000000000 do
     while true do
         let nonce = randomAlphanumericString(12)
@@ -108,15 +108,15 @@ let findBitCoins noOfLeadingZeroes inputString coinCollectorRef =
         let hashValue = generateHashInput modifiedInputString
         let coin = checkValidCoin modifiedInputString hashValue noOfLeadingZeroes 
         if coin <> "-1" then
-            coinCollectorRef <! coin
+            SupervisorRef <! coin
 
 let worker ipAddress (mailbox: Actor<'a>) =
-    let url = "akka.tcp://MyServer@" + ipAddress + ":8080/user/coinCollector"
-    let coinCollectorRef = select url system 
+    let url = "akka.tcp://BitcoinServer@" + ipAddress + ":8080/user/Supervisor"
+    let SupervisorRef = select url system 
     let rec loop () = actor {
         let! ClientTuple(noOfLeadingZeroes, inputString) = mailbox.Receive ()
         // Handle an incoming message
-        findBitCoins noOfLeadingZeroes inputString coinCollectorRef
+        findBitCoins noOfLeadingZeroes inputString SupervisorRef
         return! loop ()
     }
     loop ()
