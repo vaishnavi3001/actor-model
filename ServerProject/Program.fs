@@ -56,83 +56,43 @@ let coinCollector f initialState (mailbox: Actor<'a>) =
     }
     loop initialState
 
-// let coinCollectorRef =
-//     coinCollector printCoinAndIncrementCounter 0
-//     |> spawn system "coinCollector"
-
-// coinCollectorRef <! "Nikhil 345ynrgkrtot5enkrg";;
-
-
-// Worker
-let randomAlphanumericString length =
-    let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    let random = Random()
-    seq {
-        for _ = 1 to length do
-            yield chars.[random.Next(chars.Length)]
-    }
-    |> Seq.toArray
-    |> (fun x -> String(x))
-
-let ByteToHex bytes = 
-    bytes 
-    |> Array.map (fun (x : byte) -> System.String.Format("{0:X2}", x))
-    |> String.concat System.String.Empty
-
-let generateHashInput (inputString: string) =
-    let hashValue =
-        inputString
-        |> Encoding.UTF8.GetBytes
-        |> (new SHA256Managed()).ComputeHash
-        |> ByteToHex
-    hashValue
-
-let checkValidCoin inputString hashValue noOfLeadingZeroes =
-    let mutable compareString = ""
-    let mutable coin = ""
-    for i = 1 to noOfLeadingZeroes do
-        compareString <- compareString + "0"
-    if (string hashValue).StartsWith compareString then
-        coin <- "[Server]" + inputString + " " + hashValue
-    else
-        coin <- "-1"
-    coin
-
-let findBitCoins noOfLeadingZeroes inputString coinCollectorRef =
-    // for i = 1 to 1000000 do
-    while true do
-        let nonce = randomAlphanumericString(12)
-        let modifiedInputString = inputString + nonce
-        let hashValue = generateHashInput modifiedInputString
-        let coin = checkValidCoin modifiedInputString hashValue noOfLeadingZeroes 
-        if coin <> "-1" then
-            coinCollectorRef <! coin
-
 let worker inputString coinCollectorRef (mailbox: Actor<'a>) = 
     let rec loop () = actor {
-        let! message = mailbox.Receive ()
-        findBitCoins message inputString coinCollectorRef
+        let! k = mailbox.Receive ()
+        while true do
+      
+
+          let rstring n = 
+            let r = Random()
+            let chars = Array.concat([[|'a' .. 'z'|];[|'A' .. 'Z'|];[|'0' .. '9'|];[|'!' .. '?'|]])  
+            let sz = Array.length chars in
+            String(Array.init n (fun _ -> chars.[r.Next sz]))
+
+          let randomstr = "hshah1;" + rstring 5
+
+          //SHA 256         
+          let randombyte = System.Text.Encoding.ASCII.GetBytes(randomstr)
+          use sha256Hash = SHA256Managed.Create()
+          let encrypted = sha256Hash.ComputeHash(randombyte)
+          let bytetohex bytes = 
+            bytes 
+            |> Array.map (fun (x: byte) -> System.String.Format("{0:X2}", x))
+            |> String.concat System.String.Empty
+          let outputstring = bytetohex encrypted 
+          // FIND BITCOINS WITH LEADING ZEROS
+          let mutable count = 0
+          
+
+          for i in 0..k-1 do 
+            if outputstring.[i] = '0' then 
+              count <- count + 1
+            if count = k then
+              
+              coinCollectorRef <! randomstr + " " + outputstring
         return! loop ()
     }
     loop ()
 
-// Worker configuration
-// let noOfWorkers = 10
-// let inputString = "n.saoji"
-
-// // Single worker
-// let workerRef =
-//     worker inputString coinCollectorRef
-//     |> spawn system "worker"
-// workerRef <! 8
-
-// // Worker router
-// let workerRef =
-//     worker inputString coinCollectorRef
-//     |> spawnOpt system "worker"
-//     <| [SpawnOption.Router(RoundRobinPool(noOfWorkers))]
-// for i = 1 to noOfWorkers do
-//     workerRef <! 4
 
 
 // Master
@@ -156,11 +116,7 @@ let master (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string) wor
     }
     loop()
     
-// let masterRef =
-//     master noOfWorkers inputString workerRef
-//     |> spawn system "master"
 
-// masterRef <! 3
 
 [<EntryPoint>]
 let main argv =
@@ -171,7 +127,7 @@ let main argv =
     let noOfWorkers = 12
     printfn "[INFO] Number of workers: %d" noOfWorkers
 
-    let inputString = "n.saoji"
+    let inputString = "vaishnavi.dongre"
     printfn "[INFO] Input string: %s" inputString
 
     // Coin collector
