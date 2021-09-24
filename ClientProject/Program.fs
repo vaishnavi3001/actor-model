@@ -38,7 +38,7 @@ let router ipAddress noOfWorkers workerRef (mailbox: Actor<'a>) =
         match box message with
         | :? string as msg when msg="GetWorkFromServer" -> 
             printfn "[INFO] Client has joined. Getting work from server..."
-            serverMaster <! "AssignWorkToMe"
+            serverMaster <! "ClientInitiation"
         | :? string as msg when (msg |> String.exists (fun char -> char = '|')) ->
             printfn "[INFP] Received work from the server"
             let result = msg.Split '|'
@@ -93,7 +93,7 @@ let main argv =
     let ipAddress = string argv.[0]
     printfn "IP Address: %s" ipAddress
 
-    let noOfWorkers = 10
+    let noOfWorkers = System.Environment.ProcessorCount 
     printfn "Number of workers: %d" noOfWorkers
 
     let workerRef =

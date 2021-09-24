@@ -8,8 +8,8 @@ let config =
     Configuration.parse
         @"akka {
             log-config-on-start = on
-            stdout-loglevel = DEBUG
-            loglevel = DEBUG
+            stdout-loglevel = ERROR
+            loglevel = ERROR
             actor {
                 provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             }
@@ -19,7 +19,7 @@ let config =
                     applied-adapters = []
                     transport-protocol = tcp
                     port = 8080
-                    hostname = localhost
+                    hostname = 10.20.106.27
                 }
             }
         }"

@@ -8,33 +8,8 @@ open System.Security.Cryptography
 open Myconfig
 
 
-
-// // Configuration
-// let config =
-//     Configuration.parse
-//         @"akka {
-//             log-config-on-start = on
-//             stdout-loglevel = DEBUG
-//             loglevel = DEBUG
-//             actor {
-//                 provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-//             }
-//             remote {
-//                 helios.tcp {
-//                     transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-//                     applied-adapters = []
-//                     transport-protocol = tcp
-//                     port = 8080
-//                     hostname = localhost
-//                 }
-//             }
-//         }"
-
-
 let system = System.create "BitcoinServer" config
     
-
-
 let printCoinAndIncrementCounter str count =
     let result = (string str).Split ' '
     let inputString = result.[0]
@@ -45,7 +20,12 @@ let printCoinAndIncrementCounter str count =
 let Supervisor f initialState (mailbox: Actor<'a>) = 
     let rec loop lastState = actor {
         let! message = mailbox.Receive()
-        let newState = f message lastState
+        
+        let result = (string message).Split ' '
+        let inputString = result.[0]
+        let hashValue = result.[1]
+        printfn "%s\t%s" inputString hashValue
+        let newState = lastState + 1
         return! loop newState
     }
     loop initialState
@@ -54,8 +34,6 @@ let worker inputString SupervisorRef (mailbox: Actor<'a>) =
     let rec loop () = actor {
         let! (msg:obj) = mailbox.Receive ()
         let (k, i) : Tuple<int, int>= downcast msg
-
-        printfn "%A%A%A" msg k i
         while true do
           let rstring n = 
             let r = Random()
@@ -83,7 +61,7 @@ let worker inputString SupervisorRef (mailbox: Actor<'a>) =
               count <- count + 1
             if count = k then
               
-              SupervisorRef <! randomstr + " " + outputstring
+              SupervisorRef <! "Server:"+ randomstr + " " + outputstring
         return! loop ()
     }
     loop ()
@@ -96,12 +74,10 @@ let RouterActor (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string
         let! message = mailbox.Receive ()
         let sender = mailbox.Sender ()
         match message with
-        | "Mine" ->
-            printfn "[INFO] Call from the main"
+        | "ServerInitiation" ->
             for i = 1 to noOfWorkers do
                 workerRef <! (noOfLeadingZeroes, i)
-        | "AssignWorkToMe" ->
-            printfn "[INFO] Call from the client"
+        | "ClientInitiation" ->
             let myString = (string noOfLeadingZeroes) + "|" + inputString
             sender <! myString
         | _ -> ()
@@ -115,38 +91,39 @@ let RouterActor (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string
 [<EntryPoint>]
 let main argv =
     let noOfLeadingZeroes = int argv.[0]
-    printfn "[INFO] Number of leading zeroes: %i" noOfLeadingZeroes
-
-    let noOfWorkers = System.Environment.ProcessorCount 
-    printfn "[INFO] Number of workers: %d" noOfWorkers
-
     let inputString = "vaishnavi.dongre"
-    printfn "[INFO] Input string: %s" inputString
+    let noOfWorkers = System.Environment.ProcessorCount 
+    printfn "Number of workers: %d" noOfWorkers
 
+    // Supervisor Instatiation
     let SupervisorRef =
         Supervisor printCoinAndIncrementCounter 0
         |> spawn system "Supervisor"
 
+    // Worker Instatitaion
     let workerRef =
         worker inputString SupervisorRef
         |> spawnOpt system "worker"
         <| [SpawnOption.Router(RoundRobinPool(noOfWorkers))]
                 
-    // Router
+    // Router Instantiation
     let RouterActorRef =
         RouterActor noOfLeadingZeroes noOfWorkers inputString workerRef
         |> spawn system "RouterActor"
 
-    let proc = Process.GetCurrentProcess()
-    let cpuTimeStamp = proc.TotalProcessorTime
+    // Code Runtime stats
+    let process = Process.GetCurrentProcess()
+    let cpuTimeStamp = process.TotalProcessorTime
     let timer = new Stopwatch()
     timer.Start()
+
     try
-        RouterActorRef <! "Mine"
+        RouterActorRef <! "ServerInitiation"
         System.Console.ReadLine() |> ignore
     finally
-        let cpuTime = (proc.TotalProcessorTime - cpuTimeStamp).TotalMilliseconds
-        printfn "CPU time = %d ms" (int64 cpuTime)
-        printfn "Absolute time = %d ms" timer.ElapsedMilliseconds
+        let cpuTime = (process.TotalProcessorTime - cpuTimeStamp).TotalMilliseconds
+        printfn "CPU time = %dms" (int64 cpuTime)
+        printfn "Real time = %dms" timer.ElapsedMilliseconds
         printfn "Ratio = %f" (cpuTime / float(timer.ElapsedMilliseconds))
+
     0
