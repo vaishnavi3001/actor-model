@@ -39,7 +39,7 @@ let printCoinAndIncrementCounter str count =
     let result = (string str).Split ' '
     let inputString = result.[0]
     let hashValue = result.[1]
-    printfn "%s\t%s" inputString hashValue
+    printfn " Server %s\t%s" inputString hashValue
     count + 1
 
 let Supervisor f initialState (mailbox: Actor<'a>) = 

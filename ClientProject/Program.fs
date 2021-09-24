@@ -31,7 +31,7 @@ type ClientMessage = ClientTuple of int * string
 
 
 let router ipAddress noOfWorkers workerRef (mailbox: Actor<'a>) =
-    let url = "akka.tcp://BitcoinServer@" + ipAddress + ":8080/user/routeractor"
+    let url = "akka.tcp://BitcoinServer@" + ipAddress + ":8080/user/RouterActor"
     let serverMaster = select url system
     let rec loop() = actor {
         let! message = mailbox.Receive()
@@ -82,7 +82,7 @@ let worker ipAddress (mailbox: Actor<'a>) =
               count <- count + 1
             if count = k then
               
-              SupervisorRef <! randomstr + " " + outputstring
+              SupervisorRef <! "Client:" + randomstr + " " + outputstring
         return! loop ()
     }
     loop ()
