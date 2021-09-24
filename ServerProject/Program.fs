@@ -112,8 +112,8 @@ let main argv =
         |> spawn system "RouterActor"
 
     // Code Runtime stats
-    let process = Process.GetCurrentProcess()
-    let cpuTimeStamp = process.TotalProcessorTime
+    let procStat = Process.GetCurrentProcess()
+    let cpuTimeStamp = procStat.TotalProcessorTime
     let timer = new Stopwatch()
     timer.Start()
 
@@ -121,7 +121,7 @@ let main argv =
         RouterActorRef <! "ServerInitiation"
         System.Console.ReadLine() |> ignore
     finally
-        let cpuTime = (process.TotalProcessorTime - cpuTimeStamp).TotalMilliseconds
+        let cpuTime = (procStat.TotalProcessorTime - cpuTimeStamp).TotalMilliseconds
         printfn "CPU time = %dms" (int64 cpuTime)
         printfn "Real time = %dms" timer.ElapsedMilliseconds
         printfn "Ratio = %f" (cpuTime / float(timer.ElapsedMilliseconds))

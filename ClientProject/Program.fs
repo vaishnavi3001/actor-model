@@ -106,5 +106,5 @@ let main argv =
         |> spawn system "router"
 
     routerRef <! "GetWorkFromServer"
-    Thread.Sleep(60000000);
+    System.Console.ReadLine() |> ignore
     0
