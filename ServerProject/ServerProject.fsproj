@@ -7,10 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="myconfig.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Akka" Version="1.4.25" />
     <PackageReference Include="Akka.FSharp" Version="1.4.25" />
     <PackageReference Include="Akka.Remote" Version="1.4.25" />
   </ItemGroup>

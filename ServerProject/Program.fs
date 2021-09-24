@@ -5,29 +5,30 @@ open Akka.Routing
 open System
 open System.Diagnostics
 open System.Security.Cryptography
+open Myconfig
 
 
 
-// Configuration
-let config =
-    Configuration.parse
-        @"akka {
-            log-config-on-start = on
-            stdout-loglevel = DEBUG
-            loglevel = DEBUG
-            actor {
-                provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            }
-            remote {
-                helios.tcp {
-                    transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-                    applied-adapters = []
-                    transport-protocol = tcp
-                    port = 8080
-                    hostname = localhost
-                }
-            }
-        }"
+// // Configuration
+// let config =
+//     Configuration.parse
+//         @"akka {
+//             log-config-on-start = on
+//             stdout-loglevel = DEBUG
+//             loglevel = DEBUG
+//             actor {
+//                 provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+//             }
+//             remote {
+//                 helios.tcp {
+//                     transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
+//                     applied-adapters = []
+//                     transport-protocol = tcp
+//                     port = 8080
+//                     hostname = localhost
+//                 }
+//             }
+//         }"
 
 
 let system = System.create "BitcoinServer" config
