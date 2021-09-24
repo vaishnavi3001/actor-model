@@ -1,16 +1,11 @@
-#if INTERACTIVE
-#r "nuget: Akka.FSharp"
-#r "nuget: Akka.Remote"
-#endif
-
-open System
-open System.Text
-open System.Diagnostics
-open System.Security.Cryptography
+//Imports
 open Akka.FSharp
 open Akka.Remote
 open Akka.Routing
-open System.Threading
+open System
+open System.Diagnostics
+open System.Security.Cryptography
+
 
 
 // Configuration
@@ -35,17 +30,15 @@ let config =
         }"
 
 
-// let system = System.create "my-system" (Configuration.load())
 let system = System.create "BitcoinServer" config
     
 
-// Coin collector
+
 let printCoinAndIncrementCounter str count =
     let result = (string str).Split ' '
     let inputString = result.[0]
     let hashValue = result.[1]
     printfn "%s\t%s" inputString hashValue
-    // printfn "Incrementing counter [%d] by 1." count
     count + 1
 
 let Supervisor f initialState (mailbox: Actor<'a>) = 
@@ -121,7 +114,6 @@ let RouterActor (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string
 [<EntryPoint>]
 let main argv =
     let noOfLeadingZeroes = int argv.[0]
-    // let noOfLeadingZeroes = 4
     printfn "[INFO] Number of leading zeroes: %i" noOfLeadingZeroes
 
     let noOfWorkers = System.Environment.ProcessorCount 
@@ -130,12 +122,10 @@ let main argv =
     let inputString = "vaishnavi.dongre"
     printfn "[INFO] Input string: %s" inputString
 
-    // Coin collector
     let SupervisorRef =
         Supervisor printCoinAndIncrementCounter 0
         |> spawn system "Supervisor"
 
-    // Worker
     let workerRef =
         worker inputString SupervisorRef
         |> spawnOpt system "worker"
@@ -146,7 +136,6 @@ let main argv =
         RouterActor noOfLeadingZeroes noOfWorkers inputString workerRef
         |> spawn system "RouterActor"
 
-    // Evaluation code
     let proc = Process.GetCurrentProcess()
     let cpuTimeStamp = proc.TotalProcessorTime
     let timer = new Stopwatch()
