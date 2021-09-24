@@ -8,29 +8,6 @@ open System.Security.Cryptography
 open Myconfig
 
 
-
-// // Configuration
-// let config =
-//     Configuration.parse
-//         @"akka {
-//             log-config-on-start = on
-//             stdout-loglevel = DEBUG
-//             loglevel = DEBUG
-//             actor {
-//                 provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-//             }
-//             remote {
-//                 helios.tcp {
-//                     transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-//                     applied-adapters = []
-//                     transport-protocol = tcp
-//                     port = 8080
-//                     hostname = localhost
-//                 }
-//             }
-//         }"
-
-
 let system = System.create "BitcoinServer" config
     
 
@@ -39,7 +16,7 @@ let printCoinAndIncrementCounter str count =
     let result = (string str).Split ' '
     let inputString = result.[0]
     let hashValue = result.[1]
-    printfn "%s\t%s" inputString hashValue
+    //printfn "%s\t%s" inputString hashValue
     count + 1
 
 let Supervisor f initialState (mailbox: Actor<'a>) = 
