@@ -3,33 +3,12 @@ open Akka.Remote
 open Akka.Routing
 open System
 open System.Security.Cryptography
-open System.Threading
-
-let config =
-    Configuration.parse
-        @"akka {
-            actor {
-                provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            }
-            remote {
-                helios.tcp {
-                    transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-		            applied-adapters = []
-		            transport-protocol = tcp
-		            port = 0
-		            hostname = localhost
-                }
-            }
-        }"
-
+open Myconfig
 
 
 let system = System.create "BitcoinClient" config
 
-
-type ClientMessage = ClientTuple of int * string
-
-
+type CustomData = CustomType of int * string
 let router ipAddress noOfWorkers workerRef (mailbox: Actor<'a>) =
     let url = "akka.tcp://BitcoinServer@" + ipAddress + ":8080/user/RouterActor"
     let serverMaster = select url system
@@ -37,14 +16,12 @@ let router ipAddress noOfWorkers workerRef (mailbox: Actor<'a>) =
         let! message = mailbox.Receive()
         match box message with
         | :? string as msg when msg="GetWorkFromServer" -> 
-            printfn "[INFO] Client has joined. Getting work from server..."
             serverMaster <! "ClientInitiation"
         | :? string as msg when (msg |> String.exists (fun char -> char = '|')) ->
-            printfn "[INFP] Received work from the server"
             let result = msg.Split '|'
-            let noOfLeadingZeroes = int result.[0]
-            let inputString = result.[1]
-            workerRef <! ClientTuple(noOfLeadingZeroes, inputString)
+            let noOfZero = int result.[0]
+            let gatorID = result.[1]
+            workerRef <! CustomType(noOfZero, gatorID)
         | _ -> ()
         return! loop()
     }
@@ -54,7 +31,7 @@ let worker ipAddress (mailbox: Actor<'a>) =
     let url = "akka.tcp://BitcoinServer@" + ipAddress + ":8080/user/Supervisor"
     let SupervisorRef = select url system 
     let rec loop () = actor {
-        let! ClientTuple(k, inputString) = mailbox.Receive ()
+        let! CustomType(k, gatorID) = mailbox.Receive ()
         while true do
           let rstring n = 
             let r = Random()
@@ -62,7 +39,7 @@ let worker ipAddress (mailbox: Actor<'a>) =
             let sz = Array.length chars in
             String(Array.init n (fun _ -> chars.[r.Next sz]))
 
-          let randomstr = inputString + rstring 5
+          let randomstr = gatorID + rstring 5
 
           //SHA 256         
           let randombyte = System.Text.Encoding.ASCII.GetBytes(randomstr)
@@ -75,8 +52,6 @@ let worker ipAddress (mailbox: Actor<'a>) =
           let outputstring = bytetohex encrypted 
           // FIND BITCOINS WITH LEADING ZEROS
           let mutable count = 0
-          
-
           for i in 0..k-1 do 
             if outputstring.[i] = '0' then 
               count <- count + 1

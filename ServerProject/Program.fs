@@ -1,6 +1,5 @@
 //Imports
 open Akka.FSharp
-open Akka.Remote
 open Akka.Routing
 open System
 open System.Diagnostics
@@ -10,27 +9,21 @@ open Myconfig
 
 let system = System.create "BitcoinServer" config
     
-let printCoinAndIncrementCounter str count =
-    let result = (string str).Split ' '
-    let inputString = result.[0]
-    let hashValue = result.[1]
-    printfn " Server %s\t%s" inputString hashValue
-    count + 1
 
-let Supervisor f initialState (mailbox: Actor<'a>) = 
+let Supervisor  initialState (mailbox: Actor<'a>) = 
     let rec loop lastState = actor {
         let! message = mailbox.Receive()
         
         let result = (string message).Split ' '
-        let inputString = result.[0]
+        let gatorID = result.[0]
         let hashValue = result.[1]
-        printfn "%s\t%s" inputString hashValue
+        printfn "%s\t%s" gatorID hashValue
         let newState = lastState + 1
         return! loop newState
     }
     loop initialState
 
-let worker inputString SupervisorRef (mailbox: Actor<'a>) = 
+let worker gatorID SupervisorRef (mailbox: Actor<'a>) = 
     let rec loop () = actor {
         let! (msg:obj) = mailbox.Receive ()
         let (k, i) : Tuple<int, int>= downcast msg
@@ -41,7 +34,7 @@ let worker inputString SupervisorRef (mailbox: Actor<'a>) =
             let sz = Array.length chars in
             String(Array.init n (fun _ -> chars.[r.Next sz]))
 
-          let randomstr = inputString + rstring 5
+          let randomstr = gatorID + rstring 5
 
           //SHA 256         
           let randombyte = System.Text.Encoding.ASCII.GetBytes(randomstr)
@@ -69,16 +62,16 @@ let worker inputString SupervisorRef (mailbox: Actor<'a>) =
 
 
 // Router
-let RouterActor (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string) workerRef (mailbox: Actor<'a>) =
+let RouterActor (noOfZero: int) (noOfWorkers: int) (gatorID: string) workerRef (mailbox: Actor<'a>) =
     let rec loop () = actor {
         let! message = mailbox.Receive ()
         let sender = mailbox.Sender ()
         match message with
         | "ServerInitiation" ->
             for i = 1 to noOfWorkers do
-                workerRef <! (noOfLeadingZeroes, i)
+                workerRef <! (noOfZero, i)
         | "ClientInitiation" ->
-            let myString = (string noOfLeadingZeroes) + "|" + inputString
+            let myString = (string noOfZero) + "|" + gatorID
             sender <! myString
         | _ -> ()
         return! loop ()
@@ -90,25 +83,25 @@ let RouterActor (noOfLeadingZeroes: int) (noOfWorkers: int) (inputString: string
 
 [<EntryPoint>]
 let main argv =
-    let noOfLeadingZeroes = int argv.[0]
-    let inputString = "vaishnavi.dongre"
-    let noOfWorkers = System.Environment.ProcessorCount 
+    let noOfZero = int argv.[0]
+    let gatorID = "vaishnavi.dongre"
+    let noOfWorkers = System.Environment.ProcessorCount
     printfn "Number of workers: %d" noOfWorkers
 
     // Supervisor Instatiation
     let SupervisorRef =
-        Supervisor printCoinAndIncrementCounter 0
+        Supervisor  0
         |> spawn system "Supervisor"
 
     // Worker Instatitaion
     let workerRef =
-        worker inputString SupervisorRef
+        worker gatorID SupervisorRef
         |> spawnOpt system "worker"
         <| [SpawnOption.Router(RoundRobinPool(noOfWorkers))]
                 
     // Router Instantiation
     let RouterActorRef =
-        RouterActor noOfLeadingZeroes noOfWorkers inputString workerRef
+        RouterActor noOfZero noOfWorkers gatorID workerRef
         |> spawn system "RouterActor"
 
     // Code Runtime stats
